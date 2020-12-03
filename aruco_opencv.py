@@ -60,6 +60,8 @@ class Detection:
         self.realWidth = 200.0  # 200 cm
         self.pixelWidth = 0.0
         self.pixelHeight = 0.0
+        self.absCenter = Point(0, 0)
+        self.correctionRatio = 0.9333
         self.scale = 0.0
         self.previousPoint = Point(0, 0)
         self.distanceTravelled = 0
@@ -69,16 +71,6 @@ class Detection:
 
     def fillPoints(self):
         self.numberOfPoints = len(self.points)
-
-    def updateScreenOutput(self):
-        if self.robotCenter.x is not None:
-            cv2.putText(overlay, f"X,Y: {int(self.robotCenter.y * self.scale)} cm,"
-                                 f" {int(self.robotCenter.x * self.scale)} cm",
-                        (int(self.robotCenter.x + 200), int(self.robotCenter.y)),
-                        font, 1, (0, 0, 0), 2)
-            cv2.putText(overlay, f"Heading: {int(self.robotHeading)} deg",
-                        (int(self.robotCenter.x + 200), int(self.robotCenter.y + 40)),
-                        font, 1, (0, 0, 0), 2)
 
     def calculateDistance(self):
         distance = 0.0

@@ -10,6 +10,8 @@ UDP_PORT = 4210
 
 sock = socket.socket(socket.AF_INET,  # Internet
                      socket.SOCK_DGRAM)  # UDP
+sock.bind((UDP_IP, UDP_PORT))
+
 
 rospy.init_node('listener', anonymous=True)
 rate = rospy.Rate(1)  # 1Hz
@@ -66,6 +68,11 @@ def sendMessage():
     sock.sendto(bytes(message, "utf-8"), (UDP_IP, UDP_PORT))
 
 
+def receiveMessage():
+    data, addr = sock.recvfrom(1024)  # buffer size is 1024 bytes
+    print("received message: %s" % data)
+
+
 def driveToLocation(location):
     nav.goal_heading, nav.delta = nav.calculateGoalHeading(location)
     print(f"heading: {nav.goal_heading}, delta: {nav.delta}")
@@ -109,17 +116,12 @@ def listener():
     rospy.Subscriber("/destination", NavSatFix, destCallback)
     rospy.Subscriber("/heading", Int16, headingCallBack)
 
-    if nav.travel:
-        if len(nav.destinationList) is not 0:
-            if not nav.destination_reached:
-                driveToLocation(nav.destinationList[0])
-            else:
-                nav.destinationList.pop(0)
-                nav.destination_reached = False
-    elif nav.return_home:
-
-
-
+    if len(nav.destinationList) is not 0:
+        if not nav.destination_reached:
+            driveToLocation(nav.destinationList[0])
+        else:
+            nav.destinationList.pop(0)
+            nav.destination_reached = False
 
     # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()
