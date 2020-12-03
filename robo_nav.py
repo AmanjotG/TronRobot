@@ -25,10 +25,17 @@ class Navigation:
     def __init__(self):
         self.robot = Point(None, None)
         self.robot_heading = None
+        self.goal_heading = 0
+        self.delta = 0
         self.small_location = Point(None, None)
         self.home_location = Point(None, None)
         self.big_location = Point(None, None)
         self.destinationList = []
+        self.useCam = True
+        self.destination_reached = False
+        self.return_home = False
+        self.at_location = False
+        self.travel = True
 
     def calculateGoalHeading(self, goalPoint):
         # Calculates vector from centre of the robot to the centre of the triangle
@@ -50,26 +57,28 @@ class Navigation:
     def calculateDistance(self, point):
         return math.hypot(self.robot.x - point.x, self.robot.y - point.y)
 
-    def driveToLocation(self, location):
-        goal_heading, delta = self.calculateGoalHeading(location)
-        print(f"heading: {goal_heading}, delta: {delta}")
-        if delta > 0:
-            while not abs(delta) <= 10:
-                # turn_right
-                break
-        else:
-            while not abs(delta) <= 10:
-                # turn_left
-                break
-
 
 nav = Navigation()
 
 
+def sendMessage():
+    message = "{\"useCam\":" + f"{nav.useCam}" + ",\"delta\":" + f"{nav.delta}" + "}\r"
+    sock.sendto(bytes(message, "utf-8"), (UDP_IP, UDP_PORT))
+
+
+def driveToLocation(location):
+    nav.goal_heading, nav.delta = nav.calculateGoalHeading(location)
+    print(f"heading: {nav.goal_heading}, delta: {nav.delta}")
+    if abs(nav.delta) > 0:
+        while not abs(nav.delta) <= 5:
+            # turn_right
+            sendMessage()
+            break
+        nav.destination_reached = True
+
+
 def navCallback(data):
     nav.robot = Point(data.latitude, data.longitude)
-
-    # sock.sendto(bytes(incoming, 'utf-8'), (UDP_IP, UDP_PORT))
 
 
 def matInfoCallback(data):
@@ -82,7 +91,6 @@ def matInfoCallback(data):
 def destCallback(data):
     next_point = Point(data.latitude, data.longitude)
     nav.destinationList.append(next_point)
-    nav.driveToLocation(next_point)
 
 
 def headingCallBack(data):
@@ -100,6 +108,18 @@ def listener():
     rospy.Subscriber("/mat_info", String, matInfoCallback)
     rospy.Subscriber("/destination", NavSatFix, destCallback)
     rospy.Subscriber("/heading", Int16, headingCallBack)
+
+    if nav.travel:
+        if len(nav.destinationList) is not 0:
+            if not nav.destination_reached:
+                driveToLocation(nav.destinationList[0])
+            else:
+                nav.destinationList.pop(0)
+                nav.destination_reached = False
+    elif nav.return_home:
+
+
+
 
     # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()

@@ -10,7 +10,7 @@ from std_msgs.msg import String, Int16
 from sensor_msgs.msg import NavSatFix
 
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 # Empty list initialize to store point objects
 bounds = []
 
@@ -35,6 +35,7 @@ heading_pub = rospy.Publisher('/heading', Int16, queue_size=10)
 
 mat_pub = rospy.Publisher('/mat_info', String, queue_size=10)
 dest_pub = rospy.Publisher('/destination', NavSatFix, queue_size=10)
+
 
 rospy.init_node('open_cv', anonymous=True)
 rate = rospy.Rate(1)  # 1Hz
@@ -69,6 +70,16 @@ class Detection:
     def fillPoints(self):
         self.numberOfPoints = len(self.points)
 
+    def updateScreenOutput(self):
+        if self.robotCenter.x is not None:
+            cv2.putText(overlay, f"X,Y: {int(self.robotCenter.y * self.scale)} cm,"
+                                 f" {int(self.robotCenter.x * self.scale)} cm",
+                        (int(self.robotCenter.x + 200), int(self.robotCenter.y)),
+                        font, 1, (0, 0, 0), 2)
+            cv2.putText(overlay, f"Heading: {int(self.robotHeading)} deg",
+                        (int(self.robotCenter.x + 200), int(self.robotCenter.y + 40)),
+                        font, 1, (0, 0, 0), 2)
+
     def calculateDistance(self):
         distance = 0.0
         for i in range(len(self.points)):
@@ -78,9 +89,12 @@ class Detection:
         self.distanceTravelled = int(distance)
 
     def sendLocations(self):
-        homeLocation = Point(self.pixelHeight * 0.05 * self.scale - bounds[0].y, self.pixelWidth * 0.05 * self.scale - bounds[0].x)
-        bigLocation = Point(self.pixelHeight * 0.975 * self.scale - bounds[0].y, self.pixelWidth * 0.975 * self.scale - bounds[0].x)
-        smallLocation = Point(self.pixelHeight * 0.975 * self.scale - bounds[0].y, self.pixelWidth * 0.025 * self.scale - bounds[0].x)
+        homeLocation = Point(self.pixelHeight * 0.05 * self.scale - bounds[0].y,
+                             self.pixelWidth * 0.05 * self.scale - bounds[0].x)
+        bigLocation = Point(self.pixelHeight * 0.975 * self.scale - bounds[0].y,
+                            self.pixelWidth * 0.975 * self.scale - bounds[0].x)
+        smallLocation = Point(self.pixelHeight * 0.975 * self.scale - bounds[0].y,
+                              self.pixelWidth * 0.025 * self.scale - bounds[0].x)
         mat_pub.publish(f"{homeLocation},{smallLocation},{bigLocation}")
 
 
@@ -124,6 +138,16 @@ cv2.setMouseCallback("Transparency", draw_circle)
 detect = Detection()
 
 
+def calculateAvgPoint(someList):
+    xPoint = 0
+    yPoint = 0
+    for element in someList:
+        xPoint = xPoint + element.x
+        yPoint = yPoint + element.y
+
+    return Point(int(xPoint / len(someList)), int(yPoint / len(someList)))
+
+
 cam_matrix = np.array([[1.0e+04, 0.00000000e+00, 1.22400000e+03],
                        [0.00000000e+00, 1.0e+04, 1.02400000e+03],
                        [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]])
@@ -165,7 +189,7 @@ def runDetection():
         # Capture frame-by-frame
         ret, frame = cap.read()
 
-        scale_percent = 65  # percent of original size
+        scale_percent = 10 # percent of original size
         width = int(frame.shape[1] * scale_percent / 100)
         height = int(frame.shape[0] * scale_percent / 100)
         dim = (width, height)
@@ -220,6 +244,7 @@ def runDetection():
             contours = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
             contours = contours[0] if len(contours) == 2 else contours[1]
             i = 0
+            # cv2.drawContours(overlay, contour_list, -1, (255, 0, 0), 2)
 
             if not blocksAcquired:
                 if blockCheckCtr < checkLimit:
@@ -254,13 +279,16 @@ def runDetection():
                 else:
                     for i in range(len(detect.blockLocations)):
                         print(f"blocks {i + 1}: {detect.blockLocations[i].x}, {detect.blockLocations[i].y}")
+                        destination.latitude = detect.blockLocations[i].x
+                        destination.longitude = detect.blockLocations[i].y
+                        dest_pub.publish(destination)
                     blocksAcquired = True
-
+                    
             # for i in range(len(detect.blockLocations)):
             #     cv2.putText(overlay, f"block {i+1}",
             #                 (int(detect.pixelBlocks[i].x + 200), int(detect.pixelBlocks[i].y)),
             #                 font, 0.7, (0, 0, 0), 2)
-            cv2.drawContours(overlay, contour_list, -1, (255, 0, 0), 2)
+            # cv2.drawContours(overlay, contour_list, -1, (255, 0, 0), 2)
 
             if corners is not None:
                 for i in range(len(corners)):
