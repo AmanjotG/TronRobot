@@ -70,7 +70,7 @@ def sendMessage():
 
 def receiveMessage():
     data, addr = sock.recvfrom(1024)  # buffer size is 1024 bytes
-    print("received message: %s" % data)
+    print("received message: %s" % data) # Prints information received
 
 
 def driveToLocation(location):
