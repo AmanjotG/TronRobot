@@ -70,7 +70,7 @@ def sendMessage():
 
 def receiveMessage():
     data, addr = sock.recvfrom(1024)  # buffer size is 1024 bytes
-    print("received message: %s" % data) # Prints information received
+    print(f"received message: {data}")  # Prints information received
 
 
 def driveToLocation(location):
@@ -81,7 +81,10 @@ def driveToLocation(location):
             # turn_right
             sendMessage()
             break
-        nav.destination_reached = True
+
+    nav.destination_reached = True
+    nav.useCam = False
+    sendMessage()
 
 
 def navCallback(data):
