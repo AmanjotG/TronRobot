@@ -64,7 +64,7 @@ nav = Navigation()
 
 
 def sendMessage():
-    message = "{\"useCam\":" + f"{nav.useCam}" + ",\"delta\":" + f"{nav.delta}" + "}\r"
+    message = "{\"useCam\":" + f"{nav.useCam}" + ",\"x\":" + f"{nav.robot.x}" + ",\"y\":" + f"{nav.robot.y}" + ",\"delta\":" + f"{nav.delta}" + "}\r "
     sock.sendto(bytes(message, "utf-8"), (UDP_IP, UDP_PORT))
 
 
