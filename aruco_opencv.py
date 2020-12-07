@@ -9,11 +9,9 @@ import rospy
 from std_msgs.msg import String, Int16
 from sensor_msgs.msg import NavSatFix
 
-
 cap = cv2.VideoCapture(1)
 # Empty list initialize to store point objects
 bounds = []
-
 
 boundsDefined = False
 topLeftDefined = False
@@ -36,9 +34,12 @@ heading_pub = rospy.Publisher('/heading', Int16, queue_size=10)
 mat_pub = rospy.Publisher('/mat_info', String, queue_size=10)
 dest_pub = rospy.Publisher('/destination', NavSatFix, queue_size=10)
 
-
 rospy.init_node('open_cv', anonymous=True)
 rate = rospy.Rate(1)  # 1Hz
+
+# -- Declare Global variables
+hsv1 = [123, 41, 53, 166, 255, 255]  # 2x2
+hsv2 = [0, 76, 155, 255, 255, 255]  # 2x4
 
 
 class Point:
@@ -164,6 +165,61 @@ destination = NavSatFix()
 head = Int16()
 
 
+def Detect_Lego(frame, calibrationMode=True):
+    # Declare local variables
+    x = y = lower = upper = 0
+
+    # Convert image to HSV
+    imgHSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+    # Set values
+    # if block == 1:
+    lower = np.array([hsv1[0], hsv1[1], hsv1[2]])
+    upper = np.array([hsv1[3], hsv1[4], hsv1[5]])
+    # elif block == 2:
+    lower2 = np.array([hsv2[0], hsv2[1], hsv2[2]])
+    upper2 = np.array([hsv2[3], hsv2[4], hsv2[5]])
+    mask = cv2.inRange(imgHSV, lower, upper)
+    mask2 = cv2.inRange(imgHSV, lower2, upper2)
+
+    # Setup SimpleBlobDetector parameters.
+    params = cv2.SimpleBlobDetector_Params()
+
+    # Filter by Area.
+    params.filterByArea = True
+    params.minArea = 90
+    params.maxArea = 8000
+
+    # Filter by Circularity
+    params.filterByCircularity = False
+    # params.minCircularity = 0.1
+
+    # Filter by Convexity
+    params.filterByConvexity = False
+    # params.minConvexity = 0.1
+
+    # Filter by Inertia
+    params.filterByInertia = False
+    # params.minInertiaRatio = 0.1
+
+    # Set up the detector with default parameters.
+    detector = cv2.SimpleBlobDetector_create(params)
+
+    reversemask = 255 - mask
+    blur = cv2.GaussianBlur(reversemask, (9, 9), 0)
+    reversemask2 = 255 - mask2
+    blur2 = cv2.GaussianBlur(reversemask2, (9, 9), 0)
+
+    # Detect blobs.
+    keypoints = detector.detect(blur)
+    keypoints2 = detector.detect(blur2)
+
+    if calibrationMode:
+        return keypoints, reversemask, keypoints2, reversemask2
+    else:
+        return keypoints, keypoints2
+
+
 def runDetection():
     shot_pressed = 0
     was_pressed = False
@@ -175,13 +231,13 @@ def runDetection():
     contour_list = []
     blockCheckCtr = 0
     checkLimit = 2
-    lastPoint = Point(0,0)
+    lastPoint = Point(0, 0)
 
     while True:
         # Capture frame-by-frame
         ret, frame = cap.read()
 
-        scale_percent = 10 # percent of original size
+        scale_percent = 10  # percent of original size
         width = int(frame.shape[1] * scale_percent / 100)
         height = int(frame.shape[0] * scale_percent / 100)
         dim = (width, height)
@@ -261,7 +317,8 @@ def runDetection():
                         # Assign center of circle to robot location
                         if 100 < area < 500 and abs(cX - bounds[0].x - detect.robotCenter.x) >= 100:
                             contour_list.append(c)
-                            location = Point(int((cY - bounds[0].y) * detect.scale), int((cX - bounds[0].x) * detect.scale))
+                            location = Point(int((cY - bounds[0].y) * detect.scale),
+                                             int((cX - bounds[0].x) * detect.scale))
                             if location.x != lastPoint.x and location.y != lastPoint.y:
                                 detect.blockLocations.append(location)
 
@@ -275,7 +332,7 @@ def runDetection():
                         destination.longitude = detect.blockLocations[i].y
                         dest_pub.publish(destination)
                     blocksAcquired = True
-                    
+
             # for i in range(len(detect.blockLocations)):
             #     cv2.putText(overlay, f"block {i+1}",
             #                 (int(detect.pixelBlocks[i].x + 200), int(detect.pixelBlocks[i].y)),
