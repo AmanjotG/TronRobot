@@ -1,25 +1,17 @@
 #!/usr/bin/env python
 import json
-
 import rospy
 from std_msgs.msg import String, Int16
 from sensor_msgs.msg import NavSatFix
 import socket
+import keyboard
 import math
 import requests
-import grequests as async
-
-# UDP_IP = "192.168.0.197"
-# UDP_PORT = 4210
-#
-# sock = socket.socket(socket.AF_INET,  # Internet
-#                      socket.SOCK_DGRAM)  # UDP
-# sock.bind((UDP_IP, UDP_PORT))
 
 rospy.init_node('listener', anonymous=True)
 rate = rospy.Rate(1)  # 1Hz
 
-url = "http://10.10.60.15/info"
+url = "http://10.10.60.15/"
 
 
 class Point:
@@ -39,6 +31,9 @@ class Navigation:
         self.big_location = Point(None, None)
         self.destinationList = []
         self.useCam = True
+        self.left_speed = 50
+        self.right_speed = 50
+        self.use = 0
         self.destination_reached = False
         self.return_home = False
         self.at_location = False
@@ -69,10 +64,6 @@ class Navigation:
         self.goal_heading, self.delta = self.calculateGoalHeading(location)
         self.distance = self.calculateDistance(location)
         print(f"heading: {self.goal_heading}, delta: {self.delta}, distance: {self.distance}")
-        if abs(self.delta) > 0:
-            while not abs(self.delta) <= 5:
-                # turn_right
-                break
 
         nav.destination_reached = True
         nav.useCam = False
@@ -81,34 +72,24 @@ class Navigation:
 nav = Navigation()
 
 
-# A simple task to do to each response object
-def do_something(response):
-    print(response.url)
+def sendMessage():
+    message = {"a": f"{nav.use}", "l": {nav.left_speed}, "r": nav.right_speed}
+    # message = f"?a=0&l=50&r=50"
+    res = requests.post(url + "control", data=message)
+    print(f"Sending...{res.text}")
 
 
-# A list to hold our things to do via async
-async_list = []
-data = {'useCam': nav.useCam, 'distance': nav.distance, 'delta': nav.robot_heading}
-headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-action_item = async.post(url, data=json.dumps(data), headers=headers)
-async_list.append(action_item)
-
-# def sendMessage():
-#     data = {'useCam': nav.useCam, 'distance': nav.distance, 'delta': nav.robot_heading}
-#     headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-#     r = requests.post(url, )
-#
-# message = "{\"useCam\":" + f"{nav.useCam}" + ",\"x\":" + f"{nav.robot.x}" + ",\"y\":" + f"{nav.robot.y}" + ",
-# \"delta\":" + f"{nav.delta}" + "}\r " sock.sendto(bytes(message, "utf-8"), (UDP_IP, UDP_PORT))
-
-
-# def receiveMessage():
-#     data, addr = sock.recvfrom(1024)  # buffer size is 1024 bytes
-#     print(f"received message: {data}")  # Prints information received
+def receiveMessage():
+    # data, addr = sock.recvfrom(1024)  # buffer size is 1024 bytes
+    # print(f"received message: {data}")  # Prints information received
+    res = requests.get(url + "cube")
+    print(f"Receiving...{res.text}")
 
 
 def navCallback(data):
     nav.robot = Point(data.latitude, data.longitude)
+    sendMessage()
+    rate.sleep()
 
 
 def matInfoCallback(data):
@@ -125,6 +106,8 @@ def destCallback(data):
 
 def headingCallBack(data):
     nav.robot_heading = data.data
+    receiveMessage()
+    rate.sleep()
 
 
 def listener():
@@ -151,5 +134,4 @@ def listener():
 
 
 if __name__ == '__main__':
-    async.map(async_list)
     listener()

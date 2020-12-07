@@ -82,13 +82,17 @@ class Detection:
         self.distanceTravelled = int(distance)
 
     def sendLocations(self):
-        homeLocation = Point(self.pixelHeight * 0.05 * self.scale - bounds[0].y,
-                             self.pixelWidth * 0.05 * self.scale - bounds[0].x)
-        bigLocation = Point(self.pixelHeight * 0.975 * self.scale - bounds[0].y,
-                            self.pixelWidth * 0.975 * self.scale - bounds[0].x)
-        smallLocation = Point(self.pixelHeight * 0.975 * self.scale - bounds[0].y,
-                              self.pixelWidth * 0.025 * self.scale - bounds[0].x)
+        homeLocation = Point((self.pixelHeight * 0.05 + bounds[0].y) * self.scale,
+                             (self.pixelWidth * 0.05 + bounds[0].x) * self.scale)
+
+        bigLocation = Point((self.pixelHeight * 0.975 + bounds[0].y) * self.scale,
+                            (self.pixelWidth * 0.975 + bounds[0].x) * self.scale)
+
+        smallLocation = Point((self.pixelHeight * 0.975 + bounds[0].y) * self.scale,
+                              (self.pixelWidth * 0.025 + bounds[0].x) * self.scale)
+
         mat_pub.publish(f"{homeLocation},{smallLocation},{bigLocation}")
+        print(f"{homeLocation.x},{homeLocation.y};{smallLocation.x},{smallLocation.y};{bigLocation.x},{bigLocation.y}")
 
 
 # Function callback to handle mouse requests
@@ -287,55 +291,6 @@ def runDetection():
             corners, ids, rejectedImgPoints = aruco.detectMarkers(grayscale, aruco_dict, parameters=parameters)
             rvec, tvec, _ = aruco.estimatePoseSingleMarkers(corners, marker_length, cam_matrix, dist_coeffs)
 
-            contours = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-            contours = contours[0] if len(contours) == 2 else contours[1]
-            i = 0
-
-            if not blocksAcquired:
-                if blockCheckCtr < checkLimit:
-                    pass
-                # for c in contours:
-                #
-                #     # Returns area of a closed contour
-                #     area = cv2.contourArea(c)
-                #
-                #     # Approximates polygons based on contours
-                #     approx = cv2.approxPolyDP(c, 0.01 * cv2.arcLength(c, True), True)
-                #
-                #     # Calculates moments or centers of closed contours
-                #     M = cv2.moments(c)
-                #     if M["m00"] != 0:
-                #         cX = int(M["m10"] / M["m00"])
-                #         cY = int(M["m01"] / M["m00"])
-                #     else:
-                #         # set values as what you need in the situation
-                #         cX, cY = 0, 0
-                #
-                #     # Assign center of circle to robot location
-                #     if 100 < area < 500 and abs(cX - bounds[0].x - detect.robotCenter.x) >= 100:
-                #         contour_list.append(c)
-                #         location = Point(int((cY - bounds[0].y) * detect.scale),
-                #                          int((cX - bounds[0].x) * detect.scale))
-                #         if location.x != lastPoint.x and location.y != lastPoint.y:
-                #             detect.blockLocations.append(location)
-                #
-                #         lastPoint = location
-                #
-                #     blockCheckCtr += 1
-                else:
-                    for i in range(len(detect.blockLocations)):
-                        print(f"blocks {i + 1}: {detect.blockLocations[i].x}, {detect.blockLocations[i].y}")
-                        destination.latitude = detect.blockLocations[i].x
-                        destination.longitude = detect.blockLocations[i].y
-                        dest_pub.publish(destination)
-                    blocksAcquired = True
-
-            # for i in range(len(detect.blockLocations)):
-            #     cv2.putText(overlay, f"block {i+1}",
-            #                 (int(detect.pixelBlocks[i].x + 200), int(detect.pixelBlocks[i].y)),
-            #                 font, 0.7, (0, 0, 0), 2)
-            cv2.drawContours(overlay, contour_list, -1, (255, 0, 0), 2)
-
             if corners is not None:
                 for i in range(len(corners)):
                     x = (corners[i - 1][0][0][0] + corners[i - 1][0][1][0] + corners[i - 1][0][2][0] +
@@ -364,10 +319,10 @@ def runDetection():
                         heading_pub.publish(head)
                         cv2.putText(overlay, f"X,Y: {int(detect.robotCenter.y * detect.scale)} cm,"
                                              f" {int(detect.robotCenter.x * detect.scale)} cm",
-                                    (int(detect.robotCenter.x + 200), int(detect.robotCenter.y)),
+                                    (int(bounds[1].x - 300), int(bounds[0].y)),
                                     font, 1, (0, 0, 0), 2)
                         cv2.putText(overlay, f"Heading: {int(detect.robotHeading)} deg",
-                                    (int(detect.robotCenter.x + 200), int(detect.robotCenter.y + 40)),
+                                    (int(bounds[1].x - 300), int(bounds[0].y + 40)),
                                     font, 1, (0, 0, 0), 2)
 
             overlay = aruco.drawDetectedMarkers(overlay, corners, ids)
