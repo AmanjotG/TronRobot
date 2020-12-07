@@ -9,7 +9,7 @@ import rospy
 from std_msgs.msg import String, Int16
 from sensor_msgs.msg import NavSatFix
 
-cap = cv2.VideoCapture(2)
+cap = cv2.VideoCapture(0)
 # Empty list initialize to store point objects
 bounds = []
 
