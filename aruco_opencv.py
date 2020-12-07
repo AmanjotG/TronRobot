@@ -237,7 +237,7 @@ def runDetection():
         # Capture frame-by-frame
         ret, frame = cap.read()
 
-        scale_percent = 60  # percent of original size
+        scale_percent = 100  # percent of original size
         width = int(frame.shape[1] * scale_percent / 100)
         height = int(frame.shape[0] * scale_percent / 100)
         dim = (width, height)
@@ -293,35 +293,35 @@ def runDetection():
 
             if not blocksAcquired:
                 if blockCheckCtr < checkLimit:
-
-                    for c in contours:
-
-                        # Returns area of a closed contour
-                        area = cv2.contourArea(c)
-
-                        # Approximates polygons based on contours
-                        approx = cv2.approxPolyDP(c, 0.01 * cv2.arcLength(c, True), True)
-
-                        # Calculates moments or centers of closed contours
-                        M = cv2.moments(c)
-                        if M["m00"] != 0:
-                            cX = int(M["m10"] / M["m00"])
-                            cY = int(M["m01"] / M["m00"])
-                        else:
-                            # set values as what you need in the situation
-                            cX, cY = 0, 0
-
-                        # Assign center of circle to robot location
-                        if 100 < area < 500 and abs(cX - bounds[0].x - detect.robotCenter.x) >= 100:
-                            contour_list.append(c)
-                            location = Point(int((cY - bounds[0].y) * detect.scale),
-                                             int((cX - bounds[0].x) * detect.scale))
-                            if location.x != lastPoint.x and location.y != lastPoint.y:
-                                detect.blockLocations.append(location)
-
-                            lastPoint = location
-
-                        blockCheckCtr += 1
+                    pass
+                # for c in contours:
+                #
+                #     # Returns area of a closed contour
+                #     area = cv2.contourArea(c)
+                #
+                #     # Approximates polygons based on contours
+                #     approx = cv2.approxPolyDP(c, 0.01 * cv2.arcLength(c, True), True)
+                #
+                #     # Calculates moments or centers of closed contours
+                #     M = cv2.moments(c)
+                #     if M["m00"] != 0:
+                #         cX = int(M["m10"] / M["m00"])
+                #         cY = int(M["m01"] / M["m00"])
+                #     else:
+                #         # set values as what you need in the situation
+                #         cX, cY = 0, 0
+                #
+                #     # Assign center of circle to robot location
+                #     if 100 < area < 500 and abs(cX - bounds[0].x - detect.robotCenter.x) >= 100:
+                #         contour_list.append(c)
+                #         location = Point(int((cY - bounds[0].y) * detect.scale),
+                #                          int((cX - bounds[0].x) * detect.scale))
+                #         if location.x != lastPoint.x and location.y != lastPoint.y:
+                #             detect.blockLocations.append(location)
+                #
+                #         lastPoint = location
+                #
+                #     blockCheckCtr += 1
                 else:
                     for i in range(len(detect.blockLocations)):
                         print(f"blocks {i + 1}: {detect.blockLocations[i].x}, {detect.blockLocations[i].y}")
