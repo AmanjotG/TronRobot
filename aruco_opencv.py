@@ -331,7 +331,7 @@ def runDetection():
                     cY[i + 2] = imgK2[i].pt[1]
 
                     cv2.putText(overlay, str(int(cX[i + 2])), (int(cX[i + 2]), int(cX[i + 2])), font, 1, (0, 0, 0))
-                    cv2.putText(overlay, str(int(y[i + 2])), (int(cX[i + 2]), int(cY[i + 2] + 30)), font, 1, (0, 0, 0))
+                    cv2.putText(overlay, str(int(cY[i + 2])), (int(cX[i + 2]), int(cY[i + 2] + 30)), font, 1, (0, 0, 0))
                     cv2.putText(overlay, "2x4", (int(cX[i + 2]), int(cY[i + 2] + 60)), font, 1, (0, 0, 0))
             except:
                 pass
