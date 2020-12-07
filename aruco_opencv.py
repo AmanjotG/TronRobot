@@ -9,7 +9,7 @@ import rospy
 from std_msgs.msg import String, Int16
 from sensor_msgs.msg import NavSatFix
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(2)
 # Empty list initialize to store point objects
 bounds = []
 
@@ -38,8 +38,8 @@ rospy.init_node('open_cv', anonymous=True)
 rate = rospy.Rate(1)  # 1Hz
 
 # -- Declare Global variables
-hsv1 = [123, 41, 53, 166, 255, 255]  # 2x2
-hsv2 = [0, 76, 155, 255, 255, 255]  # 2x4
+hsv2 = [332, 333, 137, 153, 255, 255]  # 2x2
+hsv1 = [52, 53, 156, 200, 255, 255]  # 2x4
 
 
 class Point:
@@ -237,7 +237,7 @@ def runDetection():
         # Capture frame-by-frame
         ret, frame = cap.read()
 
-        scale_percent = 10  # percent of original size
+        scale_percent = 60  # percent of original size
         width = int(frame.shape[1] * scale_percent / 100)
         height = int(frame.shape[0] * scale_percent / 100)
         dim = (width, height)
@@ -261,8 +261,6 @@ def runDetection():
             if not locations_published:
                 detect.sendLocations()
                 locations_published = True
-        # else:
-        #     overlay = feed.copy()
 
         # convert to grayscale
 
@@ -292,7 +290,6 @@ def runDetection():
             contours = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
             contours = contours[0] if len(contours) == 2 else contours[1]
             i = 0
-            # cv2.drawContours(overlay, contour_list, -1, (255, 0, 0), 2)
 
             if not blocksAcquired:
                 if blockCheckCtr < checkLimit:
@@ -337,7 +334,7 @@ def runDetection():
             #     cv2.putText(overlay, f"block {i+1}",
             #                 (int(detect.pixelBlocks[i].x + 200), int(detect.pixelBlocks[i].y)),
             #                 font, 0.7, (0, 0, 0), 2)
-            # cv2.drawContours(overlay, contour_list, -1, (255, 0, 0), 2)
+            cv2.drawContours(overlay, contour_list, -1, (255, 0, 0), 2)
 
             if corners is not None:
                 for i in range(len(corners)):
