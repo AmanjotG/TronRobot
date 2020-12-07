@@ -164,6 +164,25 @@ point = NavSatFix()
 destination = NavSatFix()
 head = Int16()
 
+cX = [0, 0, 0, 0]
+cY = [0, 0, 0, 0]
+
+
+def Calibrate_Window():
+    global hsv1, hsv2
+    hsv1[0] = cv2.getTrackbarPos("Hue Min", "TrackBars")
+    hsv1[1] = cv2.getTrackbarPos("Hue Max", "TrackBars")
+    hsv1[2] = cv2.getTrackbarPos("Saturation Min", "TrackBars")
+    hsv1[3] = cv2.getTrackbarPos("Saturation Max", "TrackBars")
+    hsv1[4] = cv2.getTrackbarPos("Value Min", "TrackBars")
+    hsv1[5] = cv2.getTrackbarPos("Value Max", "TrackBars")
+    hsv2[0] = cv2.getTrackbarPos("Hue Min 2", "TrackBars")
+    hsv2[1] = cv2.getTrackbarPos("Hue Max 2", "TrackBars")
+    hsv2[2] = cv2.getTrackbarPos("Saturation Min 2", "TrackBars")
+    hsv2[3] = cv2.getTrackbarPos("Saturation Max 2", "TrackBars")
+    hsv2[4] = cv2.getTrackbarPos("Value Min 2", "TrackBars")
+    hsv2[5] = cv2.getTrackbarPos("Value Max 2", "TrackBars")
+
 
 def Detect_Lego(frame, calibrationMode=True):
     # Declare local variables
@@ -221,6 +240,7 @@ def Detect_Lego(frame, calibrationMode=True):
 
 
 def runDetection():
+    global cX, cY
     shot_pressed = 0
     was_pressed = False
     dimensions = False
@@ -237,7 +257,7 @@ def runDetection():
         # Capture frame-by-frame
         ret, frame = cap.read()
 
-        scale_percent = 10  # percent of original size
+        scale_percent = 60  # percent of original size
         width = int(frame.shape[1] * scale_percent / 100)
         height = int(frame.shape[0] * scale_percent / 100)
         dim = (width, height)
@@ -289,55 +309,32 @@ def runDetection():
             corners, ids, rejectedImgPoints = aruco.detectMarkers(grayscale, aruco_dict, parameters=parameters)
             rvec, tvec, _ = aruco.estimatePoseSingleMarkers(corners, marker_length, cam_matrix, dist_coeffs)
 
-            contours = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-            contours = contours[0] if len(contours) == 2 else contours[1]
             i = 0
             # cv2.drawContours(overlay, contour_list, -1, (255, 0, 0), 2)
 
-            if not blocksAcquired:
-                if blockCheckCtr < checkLimit:
+            imgK1, imgK2 = Detect_Lego(resized, False)
 
-                    for c in contours:
+            try:
 
-                        # Returns area of a closed contour
-                        area = cv2.contourArea(c)
+                for i in range(0, len(imgK1)):
+                    # 2x2
+                    cX[i] = imgK1[i].pt[0]
+                    cY[i] = imgK1[i].pt[1]
 
-                        # Approximates polygons based on contours
-                        approx = cv2.approxPolyDP(c, 0.01 * cv2.arcLength(c, True), True)
+                    cv2.putText(overlay, str(int(cX[i])), (int(cX[i]), int(cY[i])), font, 1, (0, 0, 0))
+                    cv2.putText(overlay, str(int(cX[i])), (int(cX[i]), int(cY[i] + 30)), font, 1, (0, 0, 0))
+                    cv2.putText(overlay, "2x2", (int(cX[i]), int(cY[i] + 60)), font, 1, (0, 0, 0))
 
-                        # Calculates moments or centers of closed contours
-                        M = cv2.moments(c)
-                        if M["m00"] != 0:
-                            cX = int(M["m10"] / M["m00"])
-                            cY = int(M["m01"] / M["m00"])
-                        else:
-                            # set values as what you need in the situation
-                            cX, cY = 0, 0
+                for i in range(0, len(imgK2)):
+                    # 2x4
+                    cX[i + 2] = imgK2[i].pt[0]
+                    cY[i + 2] = imgK2[i].pt[1]
 
-                        # Assign center of circle to robot location
-                        if 100 < area < 500 and abs(cX - bounds[0].x - detect.robotCenter.x) >= 100:
-                            contour_list.append(c)
-                            location = Point(int((cY - bounds[0].y) * detect.scale),
-                                             int((cX - bounds[0].x) * detect.scale))
-                            if location.x != lastPoint.x and location.y != lastPoint.y:
-                                detect.blockLocations.append(location)
-
-                            lastPoint = location
-
-                        blockCheckCtr += 1
-                else:
-                    for i in range(len(detect.blockLocations)):
-                        print(f"blocks {i + 1}: {detect.blockLocations[i].x}, {detect.blockLocations[i].y}")
-                        destination.latitude = detect.blockLocations[i].x
-                        destination.longitude = detect.blockLocations[i].y
-                        dest_pub.publish(destination)
-                    blocksAcquired = True
-
-            # for i in range(len(detect.blockLocations)):
-            #     cv2.putText(overlay, f"block {i+1}",
-            #                 (int(detect.pixelBlocks[i].x + 200), int(detect.pixelBlocks[i].y)),
-            #                 font, 0.7, (0, 0, 0), 2)
-            # cv2.drawContours(overlay, contour_list, -1, (255, 0, 0), 2)
+                    cv2.putText(overlay, str(int(cX[i + 2])), (int(cX[i + 2]), int(cX[i + 2])), font, 1, (0, 0, 0))
+                    cv2.putText(overlay, str(int(y[i + 2])), (int(cX[i + 2]), int(cY[i + 2] + 30)), font, 1, (0, 0, 0))
+                    cv2.putText(overlay, "2x4", (int(cX[i + 2]), int(cY[i + 2] + 60)), font, 1, (0, 0, 0))
+            except:
+                pass
 
             if corners is not None:
                 for i in range(len(corners)):
